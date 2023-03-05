@@ -1,0 +1,83 @@
+#!/bin/bash
+# set -x
+SSHMATE_FILE="./.sshmate"
+DELIMITER="|"
+
+flag_add_name=false
+flag_add_connection=false
+
+add_connection()
+{
+  echo "$1|$2" >> $SSHMATE_FILE
+}
+
+check_connection_in_file()
+{
+  grep -w $1 $SSHMATE_FILE
+  return $?
+}
+
+get_connection_by_name()
+{
+    connection=$(grep -w -i $1 $SSHMATE_FILE)
+    echo $connection
+}
+
+get_connection_cmd()
+{
+    read connection<<<$(echo $1 | cut -d "$DELIMITER" -f 2)
+    echo $connection
+}
+
+split_connection_entry()
+{
+    while IFS= read -r line
+    do
+        read name<<<$(echo $line | cut -d "$DELIMITER" -f 1)
+        read connection<<<$(echo $line | cut -d "$DELIMITER" -f 2)
+        echo $name " :  " $connection
+    done < "$SSHMATE_FILE"
+}
+
+while getopts "a:n:ld:c:" flag
+do
+    case "${flag}" in
+        a) 
+            new_connection=${OPTARG}
+            flag_add_name=true
+            #add_connection $new_connection
+            echo "adding new connection.."
+            ;;
+        n)
+            connection_name=${OPTARG}
+            flag_add_connection=true
+            #check_connection_in_file
+            ;;
+        l)
+            #list_connection=${OPTARG}
+            echo "list all connections.."
+            split_connection_entry
+            ;;
+        d)
+            new_connection=${OPTARG}
+            echo "delete connection.."
+            ;;
+        c)
+            check_connection=${OPTARG}
+            echo "checking connections:" $check_connection
+            check_connection=$(check_connection_in_file $check_connection)
+            connection=$(get_connection_by_name $check_connection)
+            connection_cmd=$(get_connection_cmd $connection)
+            echo "connecting to: " $connection_cmd
+            ssh $connection_cmd
+            ;;
+    esac
+done
+
+if $flag_add_name && $flag_add_connection; then
+  add_connection "$connection_name" "$new_connection"
+fi
+
+
+#ssh -v $1
+
