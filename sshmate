@@ -6,8 +6,34 @@ DELIMITER="|"
 flag_add_name=false
 flag_add_connection=false
 
+cecho()
+{
+  CLEAR="\033[2J"
+  BLACK="\033[30m"
+  RED="\033[31m"
+  GREEN="\033[32m"
+  YELLOW="\033[33m"
+  WHITE="\033[99m"
+  ENDCOLOR="\033[0m"
+  while [ "$1" ]; do
+    case $1 in
+         -y|--yellow) color=$YELLOW;;
+         -r|--red) color=$RED;;
+         -g|--green) color=$GREEN;;
+         -b|--black) color=$BLACK;;
+         -w|--white) color=$WHITE;;
+         -c|--clear) color=$CLEAR;;
+         *) echo -en "$1"; shift; continue;;
+    esac
+    echo -ne "${color}"
+    shift
+  done
+  echo -ne "${ENDCOLOR}"
+}
+
 add_connection()
 {
+  cecho --yellow "Adding [$2] connection with the name: $1"
   echo "$1|$2" >> $SSHMATE_FILE
 }
 
@@ -35,7 +61,7 @@ split_connection_entry()
     do
         read name<<<$(echo $line | cut -d "$DELIMITER" -f 1)
         read connection<<<$(echo $line | cut -d "$DELIMITER" -f 2)
-        echo $name " :  " $connection
+        printf "%-20s  ==>  %s\n" "$(cecho --red $name)" "$(cecho --green $connection)"
     done < "$SSHMATE_FILE"
 }
 
@@ -55,20 +81,22 @@ do
             ;;
         l)
             #list_connection=${OPTARG}
-            echo "list all connections.."
+            cecho --yellow "listing all SSH connections...\n"
             split_connection_entry
             ;;
         d)
             new_connection=${OPTARG}
-            echo "delete connection.."
+            cecho --red "deleting connection: $new_connection\n"
             ;;
         c)
             check_connection=${OPTARG}
-            echo "checking connections:" $check_connection
+            cecho --yellow "checking connection:" --green $check_connection
+            echo
             check_connection=$(check_connection_in_file $check_connection)
             connection=$(get_connection_by_name $check_connection)
             connection_cmd=$(get_connection_cmd $connection)
-            echo "connecting to: " $connection_cmd
+            cecho --yellow "connecting to: " --green $connection_cmd
+            echo
             ssh $connection_cmd
             ;;
     esac
@@ -78,6 +106,4 @@ if $flag_add_name && $flag_add_connection; then
   add_connection "$connection_name" "$new_connection"
 fi
 
-
-#ssh -v $1
 
