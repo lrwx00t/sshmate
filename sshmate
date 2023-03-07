@@ -5,6 +5,7 @@ DELIMITER="|"
 
 flag_add_name=false
 flag_add_connection=false
+flag_add_connection_description=false
 
 cecho()
 {
@@ -31,6 +32,30 @@ cecho()
   echo -ne "${ENDCOLOR}"
 }
 
+# add_description_log PC1 "added new description"
+add_description_log()
+{
+  # get connection name
+  # create a file with the connetion name and append it to it
+  # set -x
+  # get_connection_by_name $1
+  check_connection=$(check_connection_in_file $1)
+  connection_name=$(get_connection_name $check_connection)
+  # connection_name=$(get_connection_by_name $1)
+  echo "got connection: " $connection_name
+  echo $2 >> ."${connection_name}".ssh.mate
+}
+
+get_connection_by_description()
+{
+  filename=$(grep -l -ir $1 .[^.]*.ssh.mate -m 1 --exclude sshmate --exclude-dir .git) 
+  filename=$(echo $filename | sed -E 's/.(.*).ssh.mate/\1/' | tr -d "[:blank:]")
+  echo "found in file:" $filename
+  connection=$(get_connection_by_name $filename)
+  connection_cmd=$(get_connection_cmd $connection)
+  echo $connection_cmd
+}
+
 add_connection()
 {
   cecho --yellow "Adding [$2] connection with the name: $1"
@@ -39,13 +64,19 @@ add_connection()
 
 check_connection_in_file()
 {
-  grep -w $1 $SSHMATE_FILE
+  grep -wi $1 $SSHMATE_FILE
   return $?
 }
 
 get_connection_by_name()
 {
     connection=$(grep -w -i $1 $SSHMATE_FILE)
+    echo $connection
+}
+
+get_connection_name()
+{
+    read connection<<<$(echo $1 | cut -d "$DELIMITER" -f 1)
     echo $connection
 }
 
@@ -65,7 +96,7 @@ split_connection_entry()
     done < "$SSHMATE_FILE"
 }
 
-while getopts "a:n:ld:c:" flag
+while getopts "a:n:ld:c:p:s:" flag
 do
     case "${flag}" in
         a) 
@@ -88,6 +119,14 @@ do
             new_connection=${OPTARG}
             cecho --red "deleting connection: $new_connection\n"
             ;;
+        p)
+            connection_description=${OPTARG}
+            flag_add_connection_description=true
+            echo "adding with description.."
+            ;;
+        s)
+            get_connection_by_description ${OPTARG}
+            ;;
         c)
             check_connection=${OPTARG}
             cecho --yellow "checking connection:" --green $check_connection
@@ -99,11 +138,15 @@ do
             echo
             ssh $connection_cmd
             ;;
+        # *) ;;
     esac
 done
 
+if $flag_add_name && $flag_add_connection_description; then
+  set -x
+  add_description_log "$new_connection" "$connection_description"
+fi
 if $flag_add_name && $flag_add_connection; then
   add_connection "$connection_name" "$new_connection"
 fi
-
 
