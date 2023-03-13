@@ -1,11 +1,16 @@
 #!/bin/bash
 # set -x
-SSHMATE_FILE="./.sshmate"
 DELIMITER="|"
 
 flag_add_name=false
 flag_add_connection=false
-flag_add_connection_description=false
+flag_add_name_with_description=false
+
+SSHMATE_FILE=".sshmate"
+# not implemented yet
+SSHMATE_LOG_DIR=".log"
+SSHMATE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SSHMATE_FILE_PATH="${SSHMATE_DIR}/${SSHMATE_FILE}"
 
 cecho()
 {
@@ -32,51 +37,33 @@ cecho()
   echo -ne "${ENDCOLOR}"
 }
 
-# add_description_log PC1 "added new description"
-add_description_log()
-{
-  # get connection name
-  # create a file with the connetion name and append it to it
-  # set -x
-  # get_connection_by_name $1
-  check_connection=$(check_connection_in_file $1)
-  connection_name=$(get_connection_name $check_connection)
-  # connection_name=$(get_connection_by_name $1)
-  echo "got connection: " $connection_name
-  echo $2 >> ."${connection_name}".ssh.mate
-}
-
-get_connection_by_description()
-{
-  filename=$(grep -l -ir $1 .[^.]*.ssh.mate -m 1 --exclude sshmate --exclude-dir .git) 
-  filename=$(echo $filename | sed -E 's/.(.*).ssh.mate/\1/' | tr -d "[:blank:]")
-  echo "found in file:" $filename
-  connection=$(get_connection_by_name $filename)
-  connection_cmd=$(get_connection_cmd $connection)
-  echo $connection_cmd
-}
-
 add_connection()
 {
   cecho --yellow "Adding [$2] connection with the name: $1"
-  echo "$1|$2" >> $SSHMATE_FILE
+  echo "$1|$2" >> "$SSHMATE_FILE_PATH"
 }
 
 check_connection_in_file()
 {
-  grep -wi $1 $SSHMATE_FILE
+  grep -m 1 -i $1 $SSHMATE_FILE_PATH
   return $?
-}
-
-get_connection_by_name()
-{
-    connection=$(grep -w -i $1 $SSHMATE_FILE)
-    echo $connection
 }
 
 get_connection_name()
 {
     read connection<<<$(echo $1 | cut -d "$DELIMITER" -f 1)
+    echo $connection
+}
+
+get_connection_name_from_file()
+{
+    read connection<<<$(cat $1 | cut -d "$DELIMITER" -f 1)
+    echo $connection
+}
+
+get_connection_by_name()
+{
+    connection=$(grep -m 1 -i $1 $SSHMATE_FILE_PATH)
     echo $connection
 }
 
@@ -86,46 +73,91 @@ get_connection_cmd()
     echo $connection
 }
 
+# list_connection_ids()
+# {
+#     while IFS= read -r line
+#     do
+#         read name<<<$(echo $line | cut -d "$DELIMITER" -f 1)
+#         read connection<<<$(echo $line | cut -d "$DELIMITER" -f 2)
+#         printf "%-40s  ==>  %s\n" "$(cecho --red $name)" "$(cecho --green $connection)"
+#     done < "$SSHMATE_FILE_PATH"
+# }
+
 split_connection_entry()
 {
     while IFS= read -r line
     do
         read name<<<$(echo $line | cut -d "$DELIMITER" -f 1)
         read connection<<<$(echo $line | cut -d "$DELIMITER" -f 2)
-        printf "%-20s  ==>  %s\n" "$(cecho --red $name)" "$(cecho --green $connection)"
-    done < "$SSHMATE_FILE"
+        printf "%-40s  ==>  %s\n" "$(cecho --red $name)" "$(cecho --green $connection)"
+    done < "$SSHMATE_FILE_PATH"
 }
 
-while getopts "a:n:ld:c:p:s:" flag
+# add_description_log "added new description"
+add_description_log()
+{
+  echo "description is: " "$2"
+  check_connection=$(check_connection_in_file $1)
+  connection_name=$(get_connection_name "$check_connection")
+  [ -z "${connection_name}" ] && { cecho --red "No connection match found. Exit now."; exit 0; }
+  echo "got connection: " "$connection_name"
+  echo "$2" >> "${SSHMATE_DIR}/.${connection_name}.ssh.mate"
+}
+
+# get a connection by the a description match in the log
+get_connection_by_description()
+{
+  filename=$(grep -l -ir $1 ${SSHMATE_DIR}/.[^.]*.ssh.mate -m 1 --exclude sshmate --exclude-dir .git)
+  filename="$(basename "${filename}")"
+  filename=$(echo "${filename}" | sed -E 's/.(.*).ssh.mate/\1/' | tr -d "[:blank:]")
+  [ -z "${filename}" ] && { cecho --red "No match found. Exit now."; exit 0; }
+  connection=$(get_connection_by_name $filename)
+  connection_cmd=$(get_connection_cmd $connection)
+  echo $connection_cmd
+}
+
+
+# TODO: add log dir SSHMATE_LOG_DIR
+# add new connection with new ID and address 
+# add new description log to an existing connection ID
+# delete a connection
+# use a connection
+# list all connections
+while getopts "a:n:ld:c:r:s:" flag
 do
     case "${flag}" in
-        a) 
+        # -a : add new connection with this name (ID)
+        a)
             new_connection=${OPTARG}
             flag_add_name=true
             #add_connection $new_connection
             echo "adding new connection.."
             ;;
+        # -n : add connection address
         n)
             connection_name=${OPTARG}
             flag_add_connection=true
             #check_connection_in_file
+            ;;
+        d)
+            connection_description=${OPTARG} 
+            flag_add_name_with_description=true
+            cecho --yellow "add a description to existing connection\n"
             ;;
         l)
             #list_connection=${OPTARG}
             cecho --yellow "listing all SSH connections...\n"
             split_connection_entry
             ;;
-        d)
+        # remove connection
+        r)
             new_connection=${OPTARG}
             cecho --red "deleting connection: $new_connection\n"
             ;;
-        p)
-            connection_description=${OPTARG}
-            flag_add_connection_description=true
-            echo "adding with description.."
-            ;;
         s)
-            get_connection_by_description ${OPTARG}
+            connection_cmd=$(get_connection_by_description ${OPTARG})
+            echo
+            ssh $connection_cmd
             ;;
         c)
             check_connection=${OPTARG}
@@ -136,17 +168,24 @@ do
             connection_cmd=$(get_connection_cmd $connection)
             cecho --yellow "connecting to: " --green $connection_cmd
             echo
+            cecho --green "ssh $connection_cmd"
+            echo
             ssh $connection_cmd
             ;;
-        # *) ;;
+        *)
+           exit 0
     esac
 done
 
-if $flag_add_name && $flag_add_connection_description; then
-  set -x
-  add_description_log "$new_connection" "$connection_description"
-fi
+  # -n -a
+  # sshmate -n myvm2 -a user1@10.10.10.1
 if $flag_add_name && $flag_add_connection; then
   add_connection "$connection_name" "$new_connection"
 fi
 
+# -a -d
+# sshmate -a myvm2 -d "created new vm snapshot for new dev packages"
+if $flag_add_name  && $flag_add_name_with_description; then
+  # set -x
+  add_description_log "$new_connection" "$connection_description"
+fi
