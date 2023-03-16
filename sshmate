@@ -116,6 +116,21 @@ get_connection_by_description()
   echo $connection_cmd
 }
 
+remove_connection()
+{
+  # connection=$(grep -m 1 -w $1 $SSHMATE_FILE_PATH)
+  # echo $connection
+  if grep -m 1 -w $1 $SSHMATE_FILE_PATH
+  then
+    echo "found match"
+    # gsed -ni '/^mewnewconn/d;p' .sshmate
+    # set -x
+    gsed -i "/^$1/d" .sshmate
+  else
+    echo "didn't find anything.."
+  fi
+}
+
 
 # TODO: add log dir SSHMATE_LOG_DIR
 # add new connection with new ID and address 
@@ -153,6 +168,7 @@ do
         r)
             new_connection=${OPTARG}
             cecho --red "deleting connection: $new_connection\n"
+            remove_connection $new_connection
             ;;
         s)
             connection_cmd=$(get_connection_by_description ${OPTARG})
