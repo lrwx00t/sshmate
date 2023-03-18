@@ -9,7 +9,10 @@ flag_add_name_with_description=false
 SSHMATE_FILE=".sshmate"
 # not implemented yet
 SSHMATE_LOG_DIR=".log"
-SSHMATE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SSHMATE_DIR=$(cd "$(dirname "$0")"; pwd -P)
+if [[ -L "$0" ]]; then
+  SSHMATE_DIR=$(cd "$(dirname "$(readlink "$0")")"; pwd -P)
+fi
 SSHMATE_FILE_PATH="${SSHMATE_DIR}/${SSHMATE_FILE}"
 
 cecho()
@@ -93,6 +96,10 @@ split_connection_entry()
     done < "$SSHMATE_FILE_PATH"
 }
 
+function sed() {
+    gsed "$@"
+}
+
 # add_description_log "added new description"
 add_description_log()
 {
@@ -125,12 +132,22 @@ remove_connection()
     echo "found match"
     # gsed -ni '/^mewnewconn/d;p' .sshmate
     # set -x
-    gsed -i "/^$1/d" .sshmate
+    sed -i "/^$1/d" $SSHMATE_FILE_PATH
   else
     echo "didn't find anything.."
   fi
 }
 
+
+# verify_gsed()
+# {
+#   if command -v gsed > /dev/null 2>&1; then
+#     echo "gsed is installed"
+#     alias sed='gsed'
+#     export -f sed='gsed'
+#     echo "Alias created for sed"
+#   fi
+# }
 
 # TODO: add log dir SSHMATE_LOG_DIR
 # add new connection with new ID and address 
@@ -138,6 +155,7 @@ remove_connection()
 # delete a connection
 # use a connection
 # list all connections
+# verify_gsed
 while getopts "a:n:ld:c:r:s:" flag
 do
     case "${flag}" in
