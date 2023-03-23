@@ -6,6 +6,11 @@ flag_add_name=false
 flag_add_connection=false
 flag_add_name_with_description=false
 
+usage()
+{
+  # TBD
+}
+
 SSHMATE_FILE=".sshmate"
 # not implemented yet
 SSHMATE_LOG_DIR=".log"
