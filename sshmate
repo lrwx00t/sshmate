@@ -6,19 +6,16 @@ flag_add_name=false
 flag_add_connection=false
 flag_add_name_with_description=false
 
-usage()
-{
-  # TBD
-}
-
 SSHMATE_FILE=".sshmate"
 # not implemented yet
 SSHMATE_LOG_DIR=".log"
-SSHMATE_DIR=$(cd "$(dirname "$0")"; pwd -P)
-if [[ -L "$0" ]]; then
-  SSHMATE_DIR=$(cd "$(dirname "$(readlink "$0")")"; pwd -P)
-fi
+SSHMATE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 SSHMATE_FILE_PATH="${SSHMATE_DIR}/${SSHMATE_FILE}"
+
+return_path()
+{
+  echo $SSHMATE_FILE_PATH
+}
 
 cecho()
 {
@@ -101,25 +98,23 @@ split_connection_entry()
     done < "$SSHMATE_FILE_PATH"
 }
 
-function sed() {
-    gsed "$@"
-}
-
 # add_description_log "added new description"
 add_description_log()
 {
+  [ ! -d "${SSHMATE_DIR}/${SSHMATE_LOG_DIR}" ] && mkdir -p "${SSHMATE_DIR}/${SSHMATE_LOG_DIR}"
   echo "description is: " "$2"
   check_connection=$(check_connection_in_file $1)
   connection_name=$(get_connection_name "$check_connection")
   [ -z "${connection_name}" ] && { cecho --red "No connection match found. Exit now."; exit 0; }
   echo "got connection: " "$connection_name"
-  echo "$2" >> "${SSHMATE_DIR}/.${connection_name}.ssh.mate"
+  echo "$2" >> "${SSHMATE_DIR}/${SSHMATE_LOG_DIR}/.${connection_name}.ssh.mate"
 }
 
 # get a connection by the a description match in the log
 get_connection_by_description()
 {
-  filename=$(grep -l -ir $1 ${SSHMATE_DIR}/.[^.]*.ssh.mate -m 1 --exclude sshmate --exclude-dir .git)
+  [ ! -d "${SSHMATE_DIR}/${SSHMATE_LOG_DIR}" ] && mkdir -p "${SSHMATE_DIR}/${SSHMATE_LOG_DIR}"
+  filename=$(grep -l -ir $1 ${SSHMATE_DIR}/${SSHMATE_LOG_DIR}/.[^.]*.ssh.mate -m 1 --exclude sshmate --exclude-dir .git)
   filename="$(basename "${filename}")"
   filename=$(echo "${filename}" | sed -E 's/.(.*).ssh.mate/\1/' | tr -d "[:blank:]")
   [ -z "${filename}" ] && { cecho --red "No match found. Exit now."; exit 0; }
@@ -134,34 +129,14 @@ remove_connection()
   # echo $connection
   if grep -m 1 -w $1 $SSHMATE_FILE_PATH
   then
-    echo "found match"
-    # gsed -ni '/^mewnewconn/d;p' .sshmate
-    # set -x
-    sed -i "/^$1/d" $SSHMATE_FILE_PATH
+    cecho -y "Found a match.. removing the entry"
+    sed -i '' "/^$1/d" "${SSHMATE_FILE_PATH}"
   else
-    echo "didn't find anything.."
+    cecho -y "No match found.."
   fi
 }
 
-
-# verify_gsed()
-# {
-#   if command -v gsed > /dev/null 2>&1; then
-#     echo "gsed is installed"
-#     alias sed='gsed'
-#     export -f sed='gsed'
-#     echo "Alias created for sed"
-#   fi
-# }
-
-# TODO: add log dir SSHMATE_LOG_DIR
-# add new connection with new ID and address 
-# add new description log to an existing connection ID
-# delete a connection
-# use a connection
-# list all connections
-# verify_gsed
-while getopts "a:n:ld:c:r:s:" flag
+while getopts "a:n:ld:c:pr:s:" flag
 do
     case "${flag}" in
         # -a : add new connection with this name (ID)
@@ -197,6 +172,9 @@ do
             connection_cmd=$(get_connection_by_description ${OPTARG})
             echo
             ssh $connection_cmd
+            ;;
+        p)
+            return_path
             ;;
         c)
             check_connection=${OPTARG}
