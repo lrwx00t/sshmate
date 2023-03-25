@@ -15,19 +15,42 @@ flag_add_name=false
 flag_add_connection=false
 flag_add_name_with_description=false
 
-usage()
+function usage()
 {
-  echo "usage  :"
-        echo "   ${0} [option]"
-        echo "option :"
-        echo "   -h   : show help"
-        echo "   -c   : connect to a machine using an existing connection ID"
-        echo "   -l   : list all connections"
-        echo "   -n   : add a new connection"
-        echo "   -a   : add a server address to the new connection [used with -n]"
-        echo "   -d   : add a log message to an existing connection ID [used with -a]"
-        echo "   -s   : connect to a machine using an existing connection by finding match in the logs"
-        echo "   -r   : remove a connection"
+  bname=$(basename "$0")
+  cat << USAGE
+Usage:   $bname -c <NAME>                 (connect to an existing connection)
+         $bname -l                        (list all connections)
+         $bname -n <NAME> -a <ADDRESS>    (add a new connection)
+         $bname -a <NAME> -d <MESSAGE>    (add a log message to an existing 
+                                           connection)
+         $bname -s <TXT>                  (connection to an existing connection 
+                                           by a matching text in the log)
+         $bname -r <NAME>                 (remove connection)
+Options:
+         -c <CONNECTION_NAME>      (connect to an existing connection name)
+         -l                        (list all connections)
+         -n <CONNECTION_NAME>      (add a new connection name)
+         -a <CONNECTION_ADDRESS>   (add a connection address, used with -n)
+         -d <MSG>                  (add a log message to an existing connection)
+         -r <CONNECTION_NAME>      (remove an existing connection)
+         -s <TXT>                  (connect to a machine using an existing 
+                                    connection by finding match in the logs)
+         -h                        (show this message for usage help)
+         
+Example: Connect to an existing connection name
+         $bname -c do_linux_centos7
+         
+         Create a new connection
+         $bname -n do_linux_centos7 -a root@10.10.10.1
+         
+         Create a new connection
+         $bname -a do_linux_centos7 -d "installed mysql latest version"
+
+         Connect to an existing connection by searching for a match in the logs
+         $bname -s mysql
+USAGE
+  exit "$1"
 }
 
 return_path()
@@ -198,12 +221,10 @@ do
             ssh $connection_cmd
             ;;
         h)
-          usage
-          exit 0
+          usage 0
           ;;
         *)
-          usage
-          exit 1 
+          usage 1 
     esac
 done
 
@@ -216,6 +237,5 @@ fi
 # -a -d
 # sshmate -a myvm2 -d "created new vm snapshot for new dev packages"
 if $flag_add_name  && $flag_add_name_with_description; then
-  # set -x
   add_description_log "$new_connection" "$connection_description"
 fi
