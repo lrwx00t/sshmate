@@ -201,6 +201,7 @@ do
             ;;
         s)
             connection_cmd=$(get_connection_by_description ${OPTARG})
+            cecho --yellow "connecting to: " --green $connection_cmd
             echo
             ssh $connection_cmd
             ;;
