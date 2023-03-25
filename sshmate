@@ -1,20 +1,38 @@
 #!/bin/bash
 # set -x
 DELIMITER="|"
+SSHMATE_FILE=".sshmate"
+SSHMATE_LOG_DIR=".log"
+SSHMATE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+readlink $(which sshmate) &> /dev/null
+if [ $? == 0 ]; then
+  SSHMATE_DIR=$( cd -- "$( dirname -- "$(readlink $(which ${BASH_SOURCE[0]}))" )" &> /dev/null && pwd )
+fi
+SSHMATE_FILE_PATH="${SSHMATE_DIR}/${SSHMATE_FILE}"
 
+# flags to control command arguments
 flag_add_name=false
 flag_add_connection=false
 flag_add_name_with_description=false
 
-SSHMATE_FILE=".sshmate"
-# not implemented yet
-SSHMATE_LOG_DIR=".log"
-SSHMATE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-SSHMATE_FILE_PATH="${SSHMATE_DIR}/${SSHMATE_FILE}"
+usage()
+{
+  echo "usage  :"
+        echo "   ${0} [option]"
+        echo "option :"
+        echo "   -h   : show help"
+        echo "   -c   : connect to a machine using an existing connection ID"
+        echo "   -l   : list all connections"
+        echo "   -n   : add a new connection"
+        echo "   -a   : add a server address to the new connection [used with -n]"
+        echo "   -d   : add a log message to an existing connection ID [used with -a]"
+        echo "   -s   : connect to a machine using an existing connection by finding match in the logs"
+        echo "   -r   : remove a connection"
+}
 
 return_path()
 {
-  echo $SSHMATE_FILE_PATH
+  echo "$SSHMATE_FILE_PATH"
 }
 
 cecho()
@@ -78,16 +96,6 @@ get_connection_cmd()
     echo $connection
 }
 
-# list_connection_ids()
-# {
-#     while IFS= read -r line
-#     do
-#         read name<<<$(echo $line | cut -d "$DELIMITER" -f 1)
-#         read connection<<<$(echo $line | cut -d "$DELIMITER" -f 2)
-#         printf "%-40s  ==>  %s\n" "$(cecho --red $name)" "$(cecho --green $connection)"
-#     done < "$SSHMATE_FILE_PATH"
-# }
-
 split_connection_entry()
 {
     while IFS= read -r line
@@ -136,7 +144,7 @@ remove_connection()
   fi
 }
 
-while getopts "a:n:ld:c:pr:s:" flag
+while getopts "a:n:ld:c:phr:s:" flag
 do
     case "${flag}" in
         # -a : add new connection with this name (ID)
@@ -189,13 +197,18 @@ do
             echo
             ssh $connection_cmd
             ;;
+        h)
+          usage
+          exit 0
+          ;;
         *)
-           exit 0
+          usage
+          exit 1 
     esac
 done
 
-  # -n -a
-  # sshmate -n myvm2 -a user1@10.10.10.1
+# -n -a
+# sshmate -n myvm2 -a user1@10.10.10.1
 if $flag_add_name && $flag_add_connection; then
   add_connection "$connection_name" "$new_connection"
 fi

@@ -1,8 +1,5 @@
 #!/bin/env bash
 DELIMITER="|"
-SSHMATE_FILE=".sshmate"
-# SSHMATE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-# SSHMATE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 SSHMATE_FILE_PATH=$(sshmate -p)
 _sshmate_completion_function() {
     connections=()
