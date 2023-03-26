@@ -21,7 +21,7 @@ make install
 
 * Create a symlink to `sshmate` script
   ```bash
-  ln -s {REPO_PATH}/sshmate/sshmate /usr/local/bin/sshmate
+  ln -s {REPO_PATH}/sshmate /usr/local/bin/sshmate
   ```
 * Install the auto-completion script e.g. `in your ~/.zshrc`:
   ```bash
