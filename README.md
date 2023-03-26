@@ -6,7 +6,19 @@
 
 ## Installation
 
-* Clone the repo
+You need to clone the repo and `cd` in the root folder `sshmate` before proceeding further. This can be done by running the following:
+```bash
+git clone https://github.com/lrwx00t/sshmate
+cd sshmate
+```
+
+### Using `Makefile`
+```bash
+make install
+```
+
+### Manual Installation
+
 * Create a symlink to `sshmate` script
   ```bash
   ln -s {REPO_PATH}/sshmate/sshmate /usr/local/bin/sshmate
