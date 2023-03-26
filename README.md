@@ -4,6 +4,8 @@
 
 `sshmate` also supports symbolic links, which means that `sshmate` can be installed at any path. `sshmate` includes an autocompletion feature that makes it easy to quickly navigate between connction names using the `tab` key.
 
+![image](https://user-images.githubusercontent.com/96939525/227756273-d9fd41cb-41d6-49ed-8262-b75be0077b9a.png)
+
 ## Installation
 
 You need to clone the repo and `cd` in the root folder `sshmate` before proceeding further. This can be done by running the following:
